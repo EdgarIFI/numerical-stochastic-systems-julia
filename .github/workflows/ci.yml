@@ -1,0 +1,173 @@
+# Continuous integration for Stochastic Systems in Julia.
+#
+# Four independent jobs, each answering a different question:
+#
+#   test            Does the pinned, canonical environment work?
+#   lts             Are the declared compatibility bounds honest on the oldest
+#                   supported Julia?
+#   format          Is the source formatted as .JuliaFormatter.toml requires?
+#   reproducibility Does the reproducibility scaffold validate?
+#
+# Julia version policy:
+#
+#   canonical test and canonical reproducibility
+#                   Julia 1.12.6, the ratified canonical version, together with
+#                   the committed Manifest.toml.
+#   LTS compatibility
+#                   Julia LTS, with a fresh resolution from Project.toml.
+#   latest stable   Deferred. No latest-stable compatibility job exists, and one
+#                   is introduced only by a later ratified gate.
+#
+# Only Linux runners are used. The scientific claims are platform-independent and
+# the author exercises Windows locally; see docs/decisions.md, G1-D.25.
+
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'rework/**'
+  pull_request:
+  workflow_dispatch:
+
+# Supersede an in-flight run when a branch or pull request is updated again.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Read-only by default. The suggestion step inside julia-actions/julia-format
+# would additionally need `pull-requests: write`; that permission is deliberately
+# withheld. Without it the job still fails correctly on unformatted code, it
+# simply does not post inline suggestions.
+permissions:
+  contents: read
+
+jobs:
+  # ---------------------------------------------------------------------------
+  # A. Canonical test.
+  #
+  # Instantiates the committed Manifest.toml, so the environment is the pinned
+  # one in which results are produced. This is the job that speaks to exact
+  # reproduction.
+  #
+  # The Julia version is pinned to the canonical 1.12.6 rather than the moving
+  # `'1'` alias, so this job reproduces the ratified environment exactly and can
+  # never follow the alias into a future minor series without a deliberate edit.
+  # Compatibility with the oldest supported Julia is the separate concern of job
+  # B; see docs/decisions.md, G1-DEF.1 and G2-D.5.
+  # ---------------------------------------------------------------------------
+  test:
+    name: Tests (canonical manifest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.12.6'
+
+      - uses: julia-actions/cache@v3
+
+      - name: Report the canonical manifest
+        run: |
+          test -f Manifest.toml
+          julia -e 'using TOML; println("manifest julia_version = ", get(TOML.parsefile("Manifest.toml"), "julia_version", "unrecorded"))'
+
+      # Instantiates from the committed manifest and builds the package.
+      - uses: julia-actions/julia-buildpkg@v1
+
+      - name: Load the package
+        run: julia --project=. -e 'using StochasticCaseStudies'
+
+      - uses: julia-actions/julia-runtest@v1
+
+  # ---------------------------------------------------------------------------
+  # B. LTS compatibility.
+  #
+  # This job tests SUPPORTED-VERSION COMPATIBILITY, not canonical reproduction.
+  #
+  # It deletes Manifest.toml inside its own ephemeral checkout and resolves the
+  # environment afresh from Project.toml on the Julia LTS release. That answers
+  # one question only: are the [compat] bounds honest, and does the package
+  # resolve, load, and pass its tests on the oldest supported Julia?
+  #
+  # It makes NO claim about bitwise reproduction. Julia does not guarantee
+  # identical default random streams across minor releases, so results obtained
+  # here are statistically, not bitwise, comparable with canonical ones. See
+  # docs/methods/reproducibility.md.
+  #
+  # The deletion affects only the runner's working copy. The committed manifest
+  # in the repository is never modified by this workflow.
+  # ---------------------------------------------------------------------------
+  lts:
+    name: Compatibility (Julia LTS, fresh resolution)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: 'lts'
+
+      - uses: julia-actions/cache@v3
+
+      - name: Discard the canonical manifest in this ephemeral checkout only
+        run: rm -f Manifest.toml Manifest-v*.toml
+
+      - name: Resolve and instantiate from Project.toml alone
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate(); Pkg.status()'
+
+      - name: Load the package
+        run: julia --project=. -e 'using StochasticCaseStudies'
+
+      - name: Run the test suite
+        run: julia --project=. -e 'using Pkg; Pkg.test()'
+
+  # ---------------------------------------------------------------------------
+  # C. Formatting.
+  #
+  # julia-actions/julia-format performs its own checkout and Julia setup,
+  # installs JuliaFormatter v1, formats the repository, and fails the job when
+  # the result differs from what is committed. JuliaFormatter reads the
+  # repository's .JuliaFormatter.toml automatically.
+  # ---------------------------------------------------------------------------
+  format:
+    name: Formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: julia-actions/julia-format@v4
+        with:
+          version: '1'
+          paths: '.'
+
+  # ---------------------------------------------------------------------------
+  # D. Reproducibility scaffold.
+  #
+  # Runs the reproducibility utilities in the canonical environment, on the
+  # canonical Julia 1.12.6 and the committed Manifest.toml. At present
+  # verify_reproducibility.jl validates the environment files and reports that no
+  # numerical reference summaries have been registered yet, which is a pass.
+  # Once case studies register reference values, this job becomes the check that
+  # committed results still reproduce; see docs/decisions.md, G1-D.29.
+  # ---------------------------------------------------------------------------
+  reproducibility:
+    name: Reproducibility scaffold
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: julia-actions/setup-julia@v3
+        with:
+          version: '1.12.6'
+
+      - uses: julia-actions/cache@v3
+
+      - name: Instantiate the canonical environment
+        run: julia --project=. -e 'using Pkg; Pkg.instantiate()'
+
+      - name: Report the environment
+        run: julia --project=. scripts/env_report.jl
+
+      - name: Verify the reproducibility scaffold
+        run: julia --project=. scripts/verify_reproducibility.jl
