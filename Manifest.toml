@@ -2,7 +2,7 @@
 
 julia_version = "1.12.6"
 manifest_format = "2.0"
-project_hash = "17e87301c68ebcbe0b80b7c9b066ca2fbda8033a"
+project_hash = "4a6ab4636129c50956a5435455c065dcb390262a"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1342,7 +1342,7 @@ weakdeps = ["ChainRulesCore", "InverseFunctions"]
     StatsFunsInverseFunctionsExt = "InverseFunctions"
 
 [[deps.StochasticCaseStudies]]
-deps = ["CairoMakie", "Distributions", "HypothesisTests", "StatsBase"]
+deps = ["CairoMakie", "Dates", "Distributions", "HypothesisTests", "Random", "Statistics", "StatsBase", "TOML"]
 path = "."
 uuid = "42ee9c3e-c0b5-4ecf-8812-4f39dbfa284b"
 version = "0.1.0-DEV"

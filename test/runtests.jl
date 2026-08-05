@@ -15,11 +15,13 @@ const ROOT = pkgdir(StochasticCaseStudies)
         @test isdir(ROOT)
     end
 
-    @testset "no scientific interface is promised yet" begin
-        # The scaffold deliberately defines and exports nothing beyond the module
-        # itself, so that the public surface never advertises functionality that
-        # has not been implemented. This test is expected to be revised by the
-        # gate that introduces the first shared numerical utilities.
+    @testset "the package exports nothing" begin
+        # Exporting nothing is settled policy rather than a scaffold artefact:
+        # every shared function is reached through an explicit import, as in
+        # `using StochasticCaseStudies: derive_seeds`, so that a driver names what
+        # it depends on and no identifier enters a caller's namespace unannounced.
+        # The public surface of the module is therefore exactly its own name, and
+        # is expected to stay that way as case submodules are added.
         @test names(StochasticCaseStudies) == [:StochasticCaseStudies]
     end
 
@@ -71,3 +73,16 @@ const ROOT = pkgdir(StochasticCaseStudies)
         @test rand(StableRNG(1), 8) != rand(StableRNG(2), 8)
     end
 end
+
+# The shared numerical layer. One file per source file, included in the same
+# order; each declares its own imports and opens its own top-level testset, so
+# that a later gate adds a line here rather than restructuring this file.
+include("test_presets.jl")
+include("test_randomness.jl")
+include("test_brownian.jl")
+include("test_statistics.jl")
+include("test_correlated_statistics.jl")
+include("test_error_analysis.jl")
+
+# The shared reproducibility layer, in the same one-file-per-source-file pattern.
+include("test_reproducibility.jl")
