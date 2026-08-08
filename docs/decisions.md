@@ -994,3 +994,760 @@ push, and remote continuous integration remain pending and separately
 authorised, and **no remote continuous-integration run has tested this
 candidate**. **No case study, reference summary, result, figure, or dataset
 exists.**
+
+---
+
+## Gate 4 — CS-06, the Ornstein–Uhlenbeck pilot
+
+**Ratified at Gate 4A-R; recorded 2026-08-06.** Following the independent
+architecture review of Gate 4A-R, the owner ratified the decisions **G4A-D.1**
+through **G4A-D.20** together with the completion **G4A-D.10-COMP.1**, and closed
+Gate 4A-R. The Gate 3 shared core was assessed against the pilot's requirements
+and found **`SUFFICIENT_AS_PUBLISHED`**: the pilot needed no extension of it, and
+none was made.
+
+The entries below record the substance of that ratification as it binds the
+implementation, gathered by subject. They do not restate the Gate 4A-R record
+identifier by identifier, and no per-identifier mapping is asserted here beyond
+**G4A-D.10-COMP.1**, which is named in full because it is the completion that
+fixed the design of the Euler experiment.
+
+### The scientific contract
+
+The process is
+
+    dX_t = κ (μ − X_t) dt + σ dW_t,     κ > 0,  σ > 0,
+
+with the canonical parameters `κ = 1`, `μ = 1`, `σ = 1`, `x₀ = −1`, the relaxation
+time `1/κ`, the stationary variance `σ²/(2κ)`, and the transient times
+`0.25, 0.5, 1, 2, 4`.
+
+Four regimes are simulated: a transient independent ensemble from a deterministic
+start; an exactly initialised stationary independent ensemble; one stationary long
+path for correlated statistics; and the Euler–Maruyama discrete-stationary
+one-step experiment. The first three are sampled from exact laws, so their only
+error is sampling error, and the fourth is the sole use of the Euler scheme.
+
+Two conventions are fixed because each has a wrong alternative that would look
+right.
+
+- **The exact transition variance is evaluated with `expm1`.** The factor
+  `1 − e^{−2κh}` written as a subtraction loses significant digits as `κh`
+  decreases and underflows to zero below about `h = 1e-17`, which is precisely
+  the regime the finest grids occupy. `-expm1(-2κh)` is accurate throughout, and
+  the two forms are equal in exact arithmetic.
+- **The integrated autocorrelation time is compared against the finite-window
+  analytical value** `τ_L = 1 + 2 Σ_{k=1}^{L} e^{−κkh}`, never against the
+  infinite-window limit. The shared estimator of G3-CORR.1 truncates its sum at
+  the caller's window; comparing its output with the untruncated limit would
+  charge the deliberate truncation to the estimate and report a bias that is an
+  artefact of the comparison. The comparator is obtained by passing the exact
+  autocorrelations to that same shared estimator, so comparator and measurement
+  share one convention and one window by construction.
+
+The pilot's scope is bounded and its exclusions are part of the ratification. It
+does **not** study strong pathwise convergence, pathwise Brownian coupling
+between schemes, or multilevel Monte Carlo; it claims no universal superiority of
+any scheme; it claims no asymptotic order outside the grid actually tested; and
+it uses no adaptive autocorrelation window, no automatic truncation, no blocking,
+no plateau detection, no block bootstrap, and no omnibus normality or
+goodness-of-fit test.
+
+**G4A-D.10-COMP.1 — the discrete Euler invariant one-step experiment.** The
+finite-step bias of the Euler–Maruyama scheme is measured on its **invariant
+measure** rather than along a trajectory. For each step size the experiment draws
+independent initial values from the recursion's own invariant law
+`Normal(μ, v_EM(h))`, applies exactly one Euler step, and analyses the
+independent endpoint ensemble; `v_EM(h) = σ²/(κ(2 − κh))` is the exact invariant
+variance of the recursion, valid on `0 < κh < 2`, and the bias is
+`b_EM(h) = v_EM(h) − σ²/(2κ)`, computed in the algebraically simplified form
+`σ²h/(2(2 − κh))` that has no cancellation.
+
+The design is what makes the measurement clean. Because the recursion preserves
+its invariant law exactly, the endpoint variance estimates `v_EM(h)` with
+sampling error alone, so one ensemble yields both a check that the experiment
+measures what it claims and the bias itself. **There is therefore no Euler
+horizon and no Euler burn-in**, and neither is an omission: relaxing towards the
+Euler invariant law from an arbitrary start would confound the finite-step bias
+with an unconverged transient and would require a burn-in whose length would then
+have to be justified. `euler_horizon` is correspondingly absent from the recorded
+parameters.
+
+### Architecture, and what the pilot did not need
+
+The case is one semantic submodule, `StochasticCaseStudies.OrnsteinUhlenbeck`,
+organised as a flat include-based layer in dependency order after the pattern of
+G3-D.2. Results are named tuples of plain arrays under G3-D.10: no result type,
+no abstract experiment interface, no generic ten-case framework, and no shared
+Ornstein–Uhlenbeck utilities promoted in advance of a second consumer.
+
+The exact paths of the case are fixed:
+
+    src/OrnsteinUhlenbeck.jl
+    src/ornstein_uhlenbeck/model.jl
+    src/ornstein_uhlenbeck/simulation.jl
+    src/ornstein_uhlenbeck/experiments.jl
+    case-studies/06-ornstein-uhlenbeck/README.md
+    case-studies/06-ornstein-uhlenbeck/driver.jl
+    case-studies/06-ornstein-uhlenbeck/figures/ornstein-uhlenbeck.png
+    case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml
+    test/test_ornstein_uhlenbeck_model.jl
+    test/test_ornstein_uhlenbeck_simulation.jl
+    test/test_ornstein_uhlenbeck_experiments.jl
+
+The last two of the first eight — the PNG and the TOML — are the evidence paths.
+They are named here so that their location is settled, and **neither exists**;
+see *Implementation status* below.
+
+Four properties hold and are recorded because each was a live alternative.
+
+- **Zero exports.** The package and the submodule both export nothing, extending
+  G3-D.3 through this pilot as that decision's own horizon requires. Every name
+  is reached by explicit import or by qualification.
+- **No shared-core change.** The pilot consumes `preset_parameters`,
+  `derive_seeds`, `summarize_independent`, `nsigma`, `rmse`, `relative_error`,
+  `integrated_autocorrelation_time`, `summarize_correlated`, `fit_loglog`,
+  `capture_provenance`, and `write_reference_summary` as published, and modifies
+  none of them. `brownian_increments` and `coarsen_increments` are **not** used:
+  they exist for driving several step sizes with one Brownian path, which is what
+  a strong-convergence study needs and what a comparison of invariant measures
+  must not do. Their absence here is scientifically correct rather than an
+  oversight, and it is not evidence that they are unnecessary in general — CS-05
+  and a later strong-convergence study are their intended consumers.
+- **No new dependency.** The dependency set of G1-D.17 and G3-D.1 is unchanged,
+  and no package resolution was performed.
+- **Serial execution.** Nothing is threaded, `@fastmath` is not used, and no
+  performance claim is made.
+
+**Preset selection is by one optional positional argument.** The driver takes the
+preset name as its only positional argument, defaults to `smoke` when given none,
+and rejects any other argument count or value by name. No environment variable is
+read, no tracked file has to be edited to change preset, and there is no hidden
+fallback — which keeps G3-D.4's prohibition on environment overrides true at the
+point a reader actually meets it. CairoMakie is loaded inside the figure branch
+alone and appears nowhere under `src/`, so neither the package, nor the default
+run, nor the test suite pays for a plotting stack it does not use.
+
+**One master seed and nine semantic slots.** The master seed is `6_060_606`, and
+`derive_seeds(MASTER_SEED, 9)` yields nine substreams whose meanings are fixed:
+1, the transient ensemble; 2, the stationary independent ensemble; 3, the
+stationary long path; 4, the representative trajectories; and 5 to 9, the Euler
+study at `h = 0.4, 0.2, 0.1, 0.05, 0.025` respectively. All nine are derived under
+every preset, including the smoke preset whose Euler grid uses only the first
+three Euler slots, so that slot `k` holds the same value in every run and a smoke
+run is a genuine prefix of a production one. Only the master seed is ever recorded
+as provenance; the derived `UInt64` seeds exist in memory and are never written to
+a reference summary as TOML integers.
+
+### The Gate 4B and Gate 4C split
+
+Gate 4 is divided so that implementation and evidence are separately authorised
+and separately audited, in the manner G3-D.11 established for Gate 3.
+
+1. **Gate 4A-R** — architecture and scientific-contract ratification. Closed.
+2. **Gate 4B-I.1** — the implementation baseline: source, driver, tests,
+   documentation, and this record. It creates **no** scientific evidence.
+3. **Gate 4C-E.1** — the evidence gate: the figure run, the production run, the
+   committed PNG, the committed reference summary, the reference test
+   `test/test_ornstein_uhlenbeck_reference.jl`, the final public citations, and
+   the root case-status updates.
+
+The split exists because a scientific claim and the machinery that produces it
+fail in different ways and are checked by different means. Implementing the
+assembly of a reference summary is not the same as having a result to record with
+it, and the second must not inherit the acceptance of the first.
+
+### Implementation status
+
+**Gate 4B-I.1 is implemented in the current unstaged working-tree candidate.** It
+creates nine files and modifies three:
+
+- created — the four source files, the case README, the driver, and the three
+  test files listed above;
+- modified — [../src/StochasticCaseStudies.jl](../src/StochasticCaseStudies.jl),
+  which now includes the case submodule after the shared and reproducibility
+  includes; [../test/runtests.jl](../test/runtests.jl), which gains the three
+  test includes; and this document.
+
+[references.bib](references.bib) is deliberately **unchanged**: an entry is added
+only when its bibliographic metadata has been verified against an authoritative
+record, and no external source specific to this case has been so verified. Final
+public citations remain for Gate 4C-E.1. `Project.toml`, `Manifest.toml`, the
+continuous-integration workflow, the standing method documents, the root
+`README.md`, and `case-studies/README.md` are likewise unchanged, and the frozen
+Gate 3 shared core is byte-unchanged.
+
+**No scientific evidence exists.** The figure branch and the production branch of
+the driver are implemented and have **not been executed**; the directories
+`case-studies/06-ornstein-uhlenbeck/figures/` and
+`case-studies/06-ornstein-uhlenbeck/reference/` have not been created; **no PNG
+and no TOML exists**; and `test/test_ornstein_uhlenbeck_reference.jl` has not
+been written, belonging as it does to Gate 4C-E.1. The smoke preset — the default
+and the only one this gate executed — writes nothing and creates no directory,
+and the test suite checks that it leaves the case directory exactly as it found
+it. The root case-status tables are not updated, because CS-06 has produced no
+result to record.
+
+**Gate 4B-I.1 is a candidate and has not been accepted.** It was implemented
+under the owner's authorisation; an implementation does not accept itself, and
+the independent audit of this candidate has not been performed. Nothing in this
+entry authorises staging, commit, push, merge, tagging, or release. Every such
+operation remains the owner's, separately and explicitly.
+
+### Current status, superseding earlier pre-publication statements
+
+The statements identified below were true when they were recorded and are
+retained unaltered as historical record. They are **superseded** by this entry
+wherever they differ, in the manner G3-CORR.8 established: current state is
+recorded in a new entry rather than by editing an old one.
+
+Superseded, by identifier and location:
+
+- the bullet **"Publication state: nothing has been published"** in the Gate 3
+  *Implementation status* subsection;
+- the closing paragraph of **G3-CORR.8**, beginning "Nothing has been published";
+- the bullets **"No case study exists"** and **"Nothing has been staged,
+  committed, or pushed"** under *What Gate 3B-I.2 does not establish*;
+- the final bullet **"No case study has been implemented"** of the historical
+  status list in *Implementation status*;
+- the statement in G3-D.9 that its implementation status "records what was built
+  and what remains open", so far as it implies that Gate 3 is unpublished.
+
+What is true instead, as at the recording of this entry:
+
+- **The Gate 3 candidate is published.** It was staged, committed as
+  `a23166350057cf05e47d15b6abfe003c320b7677`, and pushed to
+  `origin/rework/portfolio-v1`, where local and tracking refs agree with the live
+  remote and the branch is neither ahead nor behind. Remote continuous
+  integration ran on both the push and the pull-request events and passed every
+  check on that exact commit.
+- **Pull request #1 remains open and in draft**, based on `main` at
+  `5f5e9e91c98d398681ea4e0d3579a833e0686abe`. `main` has not been modified, no
+  merge has occurred, no tag exists, and `v0.1.0` has not been released. None of
+  these is authorised.
+- **One case study has been implemented and none has produced evidence.** CS-06
+  exists as the Gate 4B-I.1 implementation baseline described above. The count of
+  completed public case studies remains **0 of 10**: no figure, no reference
+  summary, no dataset, and no reported numerical value exists for any case.
+- **The Gate 4B-I.1 candidate is unstaged and uncommitted**, has not been
+  audited, has not been accepted, and has not been tested by any remote
+  continuous-integration run.
+
+---
+
+## Gate 4B-CORR.1 — Independent-audit documentation and robustness repair
+
+**Ratified 2026-08-07.** The independent audit **Gate 4B-A.1** examined the
+Gate 4B-I.1 scientific baseline and found no blocking scope defect. It confirmed
+every nominated frozen file byte-identical to the published Gate 3 commit,
+reproduced every ratified analytical formula independently, found the source and
+API architecture, the presets, the seed map, the statistical contract, the
+finite-window autocorrelation contract, and the reference assembly consistent
+with the ratification, and confirmed that the smoke preset writes nothing, that
+CairoMakie is loaded neither by the package nor by the tests, that no PNG and no
+TOML exists, and that the test suite and the reproducibility verifier pass.
+
+The audit nevertheless identified four bounded defects. The owner ratified the
+correction **G4B-CORR.1** to repair them, together with the two durable decisions
+**G4B-CORR.1-DOC.1** and **G4B-COV.1** recorded below.
+
+**The correction reopens nothing.** Gate 4A-R, Gate 3, the shared numerical and
+reproducibility layers, the dependency set, and the continuous-integration
+workflow are untouched by it, and the scientific architecture is unchanged except
+for the one explicitly recorded refinement of the figure's sixth panel. Entries
+already in this record — including the Gate 4 entry immediately above, whatever
+its shortcomings — are retained unaltered and are supplemented rather than
+rewritten, in the manner G3-CORR.8 established.
+
+### G4B-CORR.1-DOC.1 — Gate 4A-R decision-resolution and contract completion
+
+**Ratified 2026-08-07.** The Gate 4 entry above records the substance of the
+Gate 4A-R ratification gathered by subject, and states in terms that no
+per-identifier mapping is asserted there beyond G4A-D.10-COMP.1. That was an
+accurate description of what it did, and an insufficient decision record. A later
+decision cannot cite or supersede an individual `G4A-D` identifier that this
+record does not resolve, and a substantial part of the ratified numeric
+contract — the statistical acceptance thresholds, the exact preset sizes, the
+figure layout, and the reference-summary rules — was consequently recoverable
+only by reading source code, which is not what a decision record is for.
+
+This subsection supplements that entry. It **maps every identifier to its binding
+subject and substance**, and restores the omitted numeric contract to the durable
+record. It rewrites no history and changes no decision.
+
+**G4A-D.1 — Bounded scientific questions and claims.** CS-06 studies the
+transient mean and variance, the stationary marginal law, the temporal
+autocorrelation, the uncertainty of an estimate formed from correlated
+observations, the finite-step Euler–Maruyama stationary bias, and deterministic
+reproducibility. It explicitly excludes strong pathwise convergence, Brownian
+pathwise coupling, multilevel Monte Carlo, any universal claim that one method is
+superior to another, and any claim of optimality for the explicit-window
+autocorrelation estimator.
+
+**G4A-D.2 — Ornstein–Uhlenbeck parameterisation.** The model is
+
+    dX_t = κ (μ − X_t) dt + σ dW_t,
+
+on the domain `κ > 0`, `σ > 0`, with the canonical parameters
+
+    κ = 1,  μ = 1,  σ = 1,  x₀ = −1,
+
+and the derived scales: relaxation time `1/κ`, stationary variance `σ²/(2κ)`, and
+stationary standard deviation `σ/√(2κ)`.
+
+**G4A-D.3 — Scientific regimes.** Three sampled regimes are fixed: an independent
+transient ensemble from the deterministic start `x₀ ≠ μ`; an exactly initialised
+stationary independent ensemble; and an exactly initialised stationary long path
+for correlated statistics. The canonical transient times are
+
+    0.25,  0.5,  1.0,  2.0,  4.0.
+
+Burn-in is **not** the primary stationary construction: both stationary regimes
+begin in the invariant law by construction.
+
+**G4A-D.4 — Exact transition.** The principal method is the exact transition
+
+    X_{t+h} = μ + exp(−κh)(X_t − μ) + σ √((1 − exp(−2κh)) / (2κ)) Z,
+    Z ~ N(0, 1),
+
+whose innovation variance is evaluated in the numerically stable `expm1`-based
+form. Weighted stochastic innovations for this process remain **case-local**; no
+promotion of them into the shared core is authorised.
+
+**G4A-D.5 — Simulation methods.** The canonical scientific method is the exact
+transition. Euler–Maruyama is a secondary, bounded comparison, and its stationary
+analysis is admissible only on `0 < κh < 2`. No strong-convergence study and no
+pathwise-coupling study belongs to this pilot.
+
+**G4A-D.6 — Validation structure.** Validation is separated into four kinds:
+deterministic analytical and formula validation; independent Monte Carlo
+validation; correlated time-series validation; and production reference
+validation.
+
+**G4A-D.7 — Statistical acceptance rules.** Deterministic formulas are judged
+against scale-aware numerical tolerances. An independent mean is accepted when
+
+    |empirical_mean − analytic_mean| / estimated_SE ≤ 4.
+
+The uncertainty of the sample variance of an independent Gaussian ensemble is
+
+    SE(s²) = v_analytic √(2 / (n − 1)),
+
+and the variance is accepted when
+
+    |s² − v_analytic| / SE(s²) ≤ 4.
+
+**The standard error of the mean must not be used as the uncertainty of a
+variance**; the two differ by a factor of order `σ√(n/2)`, and substituting one
+for the other is a category error large enough to invert a verdict. No omnibus
+normality or goodness-of-fit test is required. Should a formal hypothesis test be
+introduced later, it uses `alpha = 0.001`.
+
+**G4A-D.8 — Autocorrelation and correlated uncertainty.** The canonical
+correlation interval is `h_corr = 0.1 × relaxation_time`, which for the canonical
+parameters is `h_corr = 0.1`. The lag windows are explicit and fixed by preset:
+
+    smoke:       maxlag = 40
+    figure:      maxlag = 80
+    production:  maxlag = 80
+
+The analytical comparator is the finite-window quantity
+
+    τ_L = 1 + 2 Σ_{k=1}^{L} exp(−κkh),
+
+and the finite-window estimator is **never** silently compared against the
+infinite-window quantity. Production acceptance requires a correlated-mean
+discrepancy within four standard errors, a relative finite-window integrated
+autocorrelation-time error of at most `0.10`, and an autocorrelation root mean
+squared error of at most `0.015`; the figure preset admits `0.025` for the last
+of these. Smoke correlation checks are structural and are not production-precision
+claims. Adaptive windows, automatic truncation, blocking, plateau detection, and
+block bootstrap intervals remain deferred.
+
+**G4A-D.9 — Canonical reference quantities.** One compact schema-version-1 TOML
+production summary is authorised. It may carry the model and preset identity, the
+canonical parameters, the master seed, the transient analytical and empirical
+moments, uncertainties and discrepancies in standard errors, the stationary
+evidence, the finite-window integrated autocorrelation time, the effective sample
+size, the correlated standard error of the mean, the autocorrelation root mean
+squared error with compact autocorrelation arrays, the analytical and empirical
+Euler bias evidence, the finite-grid fit diagnostics, and clean Git provenance. It
+must **not** carry raw trajectories, representative-path arrays, smoke evidence,
+local or temporary paths, figure pixels, or performance claims. **Only the
+production preset is reference-eligible.**
+
+**G4A-D.10 — Preset contract.** The case-local preset vocabulary is `smoke`,
+`figure`, and `production`. The canonical parameters are identical under all
+three — `kappa = 1.0`, `mu = 1.0`, `sigma = 1.0`, `x0 = -1.0` — as are the
+canonical transient times `[0.25, 0.5, 1.0, 2.0, 4.0]`. The ratified sizes are
+
+    smoke:
+        transient_paths        = 4_000
+        stationary_samples     = 4_000
+        long_path_length       = 20_000
+        correlation_step       = 0.1
+        maxlag                 = 40
+        euler_steps            = [0.4, 0.2, 0.1]
+        euler_paths            = 4_000
+        representative_paths   = 4
+        representative_horizon = 5.0
+        representative_step    = 0.02
+        reference_eligible     = false
+
+    figure:
+        transient_paths        = 30_000
+        stationary_samples     = 30_000
+        long_path_length       = 100_000
+        correlation_step       = 0.1
+        maxlag                 = 80
+        euler_steps            = [0.4, 0.2, 0.1, 0.05, 0.025]
+        euler_paths            = 30_000
+        representative_paths   = 12
+        representative_horizon = 5.0
+        representative_step    = 0.02
+        reference_eligible     = false
+
+    production:
+        transient_paths        = 200_000
+        stationary_samples     = 200_000
+        long_path_length       = 250_000
+        correlation_step       = 0.1
+        maxlag                 = 80
+        euler_steps            = [0.4, 0.2, 0.1, 0.05, 0.025]
+        euler_paths            = 200_000
+        representative_paths   = 12
+        representative_horizon = 5.0
+        representative_step    = 0.02
+        reference_eligible     = true
+
+Drivers default to `smoke`, and there are no environment-variable overrides. On
+the full five-point Euler grid, where a meaningful empirical log-log fit exists,
+the acceptance criteria are
+
+    |empirical_slope − analytic_finite_grid_slope| ≤ 0.20,
+    r² ≥ 0.95.
+
+The smoke three-point fit is **diagnostic only** and is not canonical evidence.
+
+**G4A-D.10-COMP.1 — Euler discrete-stationary one-step experiment.** For each
+stable step, with `a_h = 1 − κh`, the exact invariant variance of the Euler
+recursion is
+
+    v_EM(h) = σ² / [κ(2 − κh)].
+
+Independent initial values are drawn as `X₀⁽ⁱ⁾ ~ Normal(μ, v_EM(h))`, exactly one
+Euler step is applied,
+
+    X₁ = X₀ + κ(μ − X₀)h + σ √h Z,
+
+and the endpoint ensemble is validated against the discrete invariant law.
+`v_EM(h)` is compared against `v_∞ = σ²/(2κ)`. **There is no Euler burn-in and no
+Euler horizon.** The substance of this completion is also recorded in the Gate 4
+entry above, which remains its fuller statement of rationale.
+
+**G4A-D.11 — Deterministic seed allocation.** The master seed is `6_060_606`.
+Nine seeds are derived for every preset, with the fixed semantic map
+
+    1 — exact transient ensemble
+    2 — exact stationary independent ensemble
+    3 — exact stationary long path
+    4 — representative exact trajectories
+    5 — Euler h = 0.4
+    6 — Euler h = 0.2
+    7 — Euler h = 0.1
+    8 — Euler h = 0.05
+    9 — Euler h = 0.025
+
+The initial implementation is serial. Derived `UInt64` values are not written as
+TOML integers.
+
+**G4A-D.12 — Case-local source architecture.** The case is a zero-export semantic
+submodule in three logical layers: analytical and model quantities; simulation
+kernels; and experiments, validation, and durable-summary assembly. Results are
+named tuples and arrays. There is no universal result hierarchy, no generic
+ten-case framework, no shared Ornstein–Uhlenbeck utility module, and no
+shared-core modification.
+
+**G4A-D.13 — Literal driver structure.** The driver is
+`case-studies/06-ornstein-uhlenbeck/driver.jl`, divided into `# %%` cells. With
+zero positional arguments it runs `smoke`; one positional argument selects
+`smoke`, `figure`, or `production`. There are no `ENV` overrides. Smoke writes
+nothing; figure writes only the case PNG; production writes only the canonical
+reference TOML.
+
+**G4A-D.14 — Literal test architecture.** The Gate 4B tests are
+
+    test/test_ornstein_uhlenbeck_model.jl
+    test/test_ornstein_uhlenbeck_simulation.jl
+    test/test_ornstein_uhlenbeck_experiments.jl
+
+and the later Gate 4C reference test is
+`test/test_ornstein_uhlenbeck_reference.jl`. Routine continuous integration uses
+smoke-scale tests; figure-scale and production-scale statistical generation
+remain outside it.
+
+**G4A-D.15 — Figure contract.** Exactly one PNG is committed, at
+`case-studies/06-ornstein-uhlenbeck/figures/ornstein-uhlenbeck.png`, laid out as
+`2 × 3`:
+
+    A — transient mean and representative trajectories
+    B — transient variance
+    C — stationary Gaussian marginal
+    D — empirical versus exact autocorrelation
+    E — finite-window integrated autocorrelation time and correlated uncertainty
+    F — Euler stationary-variance bias
+
+Figures are validated scientifically through the numerical quantities behind
+them, never by pixel equality. Panel F is further refined by G4B-CORR.1 below.
+
+**G4A-D.16 — Reference-summary contract.** The canonical path is
+`case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml`, at schema
+version 1, written under the production preset alone. Only the master seed is
+recorded, in provenance; no derived `UInt64` seed appears. Arrays are homogeneous.
+No raw trajectory appears, and no `euler_horizon` field exists. Production
+provenance requires a clean Git worktree.
+
+**G4A-D.17 — Documentation contract.** The case README contains, independently
+authored: the scientific question; the equations and notation; the analytical
+theory; the numerical methods; the parameter choices; the results; the statistical
+validation; the reproducibility instructions; the limitations; and the bounded
+conclusions. Repository integration uses professional case-study framing.
+
+**G4A-D.18 — Performance targets.** The following are unmeasured upper-bound
+targets and are **not** public measured-performance claims:
+
+    smoke, warm session:         ≤ 5 s
+    smoke, cold start:           ≤ 60 s
+    routine CS-06 tests:         ≤ 60 s
+    full canonical test suite:   ≤ 5 min
+    figure generation:           ≤ 3 min
+    production reference:        ≤ 15 min
+    peak resident memory:        ≤ 512 MB
+
+**G4A-D.19 — Shared-core sufficiency.** The decision is
+**`SUFFICIENT_AS_PUBLISHED`**. The Gate 3 shared files remain frozen and no new
+dependency is required.
+
+**G4A-D.20 — Gate 4 execution and acceptance contract.** Gate 4 is split into
+**Gate 4B-I.1**, the scientific implementation baseline, and **Gate 4C-E.1**,
+production evidence and integration. Gate 4B generates and commits no PNG or TOML
+evidence. Gate 4C later generates the production TOML from a clean Gate 4B
+baseline commit, then generates the figure, adds the reference test, finalises the
+documentation, and undergoes independent audit and owner-controlled Git
+transitions.
+
+**Effect of this subsection.** It supplements the earlier Gate 4A-R block; it does
+not rewrite history; it does not change the scientific architecture except where
+an explicit G4B-CORR.1 refinement below says so; and later decisions may now cite
+and supersede individual `G4A-D` identifiers unambiguously.
+
+### G4B-COV.1 — Portfolio scientific-coverage completeness
+
+**Ratified 2026-08-07.** This decision governs how completely a public case study
+must answer the questions it sets itself.
+
+**Every completed public case study must answer its bounded scientific questions
+explicitly.** Where scientifically relevant, a completed case includes analytical
+context or derivation; numerical outputs; appropriate statistical summaries;
+uncertainty information; reproducible plots; a quantitative comparison of theory
+against simulation; validation criteria; interpretation; limitations; and bounded
+scientific conclusions.
+
+The repository is a professional computational-science portfolio composed of
+independently authored case studies. **Completeness of scientific coverage must
+not be sacrificed in order to make the repository look less like an exercise
+collection.** Conversely, completeness must never be expressed in the framing of
+one: the two requirements are independent, and satisfying either at the cost of
+the other is a failure of this decision.
+
+The project optimises for high execution throughput by eliminating redundant
+process, and never by reducing scientific rigour, justification, reproducibility,
+validation, documentation quality, or independent review. Speed is bought from
+ceremony, not from evidence.
+
+Where the owner consults private historical material outside the public
+repository, it serves only as a private coverage checklist. It is never cited,
+quoted, copied, reconstructed, or exposed publicly, and nothing in this decision
+authorises its use as an implementation source; the repository and properly cited
+public academic or official software sources remain the sole implementation
+authority.
+
+This decision expands no implementation scope. In particular it authorises no
+work beyond CS-06 under G4B-CORR.1.
+
+### The correction itself
+
+**G4B-CORR.1 — Independent-audit documentation and robustness repair.**
+*Ratified 2026-08-07.* The correction has four parts.
+
+**One — the decision record.** G4B-CORR.1-DOC.1 above resolves every `G4A-D`
+identifier individually and restores the omitted numeric contract.
+
+**Two — a false quantitative statement in the case README.** Section 6 asserted
+that starting at `x₀ = −1` places the process "two stationary standard deviations
+below its long-run mean — roughly `2.83 √v_∞`". The two halves of that sentence
+contradict each other. For the canonical parameters `v_∞ = 1/2`, so
+`√v_∞ = 1/√2`, and the displacement `|x₀ − μ| = 2` is
+
+    2 / (1/√2) = 2√2 ≈ 2.828427
+
+stationary standard deviations. The prose now states unambiguously that the
+initial state is **two units** below the long-run mean, which is approximately
+**2.83 stationary standard deviations**. No canonical parameter and no scientific
+result changed.
+
+**Three — the robustness of the empirical Euler fit.** The audit verified that
+`empirical_bias` is signed, that it was passed directly to the shared
+`fit_loglog`, that `fit_loglog` requires every ordinate to be strictly positive,
+and that the canonical seed and all eight predeclared audit seeds pass. It
+observed nonetheless that for a mathematically valid alternative master seed
+sampling noise can drive a signed empirical bias to zero or below, so that a
+scientifically valid simulation could fail for a reason unrelated to the validity
+of the model. The ratified repair leaves the observable untouched and moves the
+optionality into the fit:
+
+- the reported scientific quantity remains exactly
+  `empirical_bias = empirical_variance − exact_ou_variance`, **signed**;
+- no absolute value, square, clamp, floor, epsilon, sign replacement, seed
+  change, sample-size change, silent point removal, or resampling is authorised;
+- a case-local internal helper decides the fit. Where every bias is finite and
+  strictly positive it returns `fit_loglog(steps, empirical_bias)`; where any
+  finite bias is `≤ 0` it returns `nothing`; a non-finite bias remains an error.
+  Unrelated errors from `fit_loglog` are not caught, and the shared contract of
+  `fit_loglog` is neither weakened nor modified;
+- `result.euler.empirical_fit` therefore has the semantics *fit named tuple, or
+  `nothing`*, and the remainder of the Euler result is returned whenever the
+  simulation itself is scientifically valid. **A non-positive signed empirical
+  bias is not by itself an invalid simulation**;
+- `run_case_study` continues to return a complete result for any valid master
+  seed even when the empirical fit is absent, and the master seed is neither
+  restricted to the canonical one nor silently replaced by it.
+
+**A production reference remains stricter than an in-memory simulation.** Because
+a reference summary is required to carry `euler_fit_slope`, `reference_values`
+refuses to assemble one when `empirical_fit === nothing`, with an explicit error
+and before any file operation. It does not substitute the analytical fit, insert
+`NaN` or zero, omit the field silently, or use an absolute bias. Canonical
+evidence may demand a stronger condition than a general simulation, and here it
+does.
+
+The full-grid acceptance criteria are unchanged: the analytical fit always uses
+the strictly positive analytical bias, and where the empirical fit exists the
+criteria of G4A-D.10 apply. No asymptotic-order claim beyond the studied finite
+grid is authorised, and the smoke three-point slope remains diagnostic only.
+
+**Four — Panel F of the figure, refining G4A-D.15.** The panel drew a
+logarithmic bias axis although the ratified four-standard-error intervals cross
+zero for some figure and production points, so that the lower half of such an
+interval could not be drawn at all. Panel F remains *Euler stationary-variance
+bias*, with a **logarithmic** axis in `h` and a **linear** axis in the bias. The
+plotted empirical observable remains the signed
+`empirical_variance − exact_ou_variance`, and the panel draws the signed
+empirical bias, the complete `±4 × variance_se` intervals, the analytical Euler
+stationary bias, and a horizontal line at zero. Negative error bars are not
+clipped, lower endpoints are not suppressed, absolute bias is not used, no
+symlog workaround is adopted, `yscale = log10` is not retained, and uncertainty
+that crosses zero is not hidden. The analytical bias remains positive over the
+stable canonical grid. Where the empirical fit exists the panel may report its
+slope; where it does not, the panel still represents the signed bias and states
+that the fit is unavailable.
+
+This distinguishes **signed-bias visualisation** from **empirical log-log-fit
+evidence**. A figure may display a signed empirical bias that crosses zero; a
+production reference may not claim an empirical log-log slope unless the fit is
+mathematically defined under the ratified positive-ordinate contract.
+
+**Durable effects.** G4B-CORR.1 establishes exactly the following.
+
+1. G4A-D.1 through G4A-D.20 are individually resolvable.
+2. The omitted numeric statistical, preset, figure, and reference contract is
+   restored to the durable decision record.
+3. The README canonical displacement statement is corrected from an incorrect
+   "two stationary standard deviations" to two units, approximately 2.83
+   stationary standard deviations.
+4. Empirical Euler bias remains signed.
+5. A noisy non-positive signed empirical bias does not invalidate the simulation.
+6. The empirical log-log fit is optional at the in-memory result level.
+7. No absolute-value bias transformation is authorised.
+8. No silent point dropping is authorised.
+9. A production reference requires a defined empirical fit.
+10. Panel F uses a logarithmic `h` axis and a linear signed-bias axis.
+11. Complete four-standard-error intervals may cross zero and must remain
+    visible.
+12. No shared-core modification is authorised.
+13. No dependency modification is authorised.
+14. No seed or sample-size change is authorised.
+15. No PNG or TOML generation is authorised by this correction.
+16. No Git mutation is authorised.
+17. Gate 4B remains unaccepted until a fresh focused re-audit passes.
+
+**Scope of the change.** The correction alters exactly five paths:
+[decisions.md](decisions.md),
+[../case-studies/06-ornstein-uhlenbeck/README.md](../case-studies/06-ornstein-uhlenbeck/README.md),
+[../src/ornstein_uhlenbeck/experiments.jl](../src/ornstein_uhlenbeck/experiments.jl),
+[../case-studies/06-ornstein-uhlenbeck/driver.jl](../case-studies/06-ornstein-uhlenbeck/driver.jl),
+and
+[../test/test_ornstein_uhlenbeck_experiments.jl](../test/test_ornstein_uhlenbeck_experiments.jl).
+No other path changed. The frozen Gate 3 shared core, the two other case source
+files, the two other case test files, the root and taxonomy READMEs, the standing
+method documents, `Project.toml`, `Manifest.toml`, the continuous-integration
+workflow, and the reproducibility script are all byte-unchanged.
+
+**Status.** The repaired candidate remains **unstaged and uncommitted**, and no
+scientific evidence exists: the figure and production branches have still not been
+executed, the `figures/` and `reference/` directories have still not been created,
+and no PNG and no TOML exists. **G4B-CORR.1 has not been accepted.** It was
+implemented under the owner's authorisation; an implementation does not accept its
+own repair, and a fresh focused independent re-audit of this correction has not
+been performed. Nothing in this entry authorises staging, commit, push, merge,
+tagging, or release.
+
+### G4B-COV.1-CORR.1 — Public-facing framing clarification
+
+**Ratified 2026-08-07.** This entry resolves the terminology tension between
+G1-D.1 and G4B-COV.1. It is a clarification of wording only. It is appended after
+both entries and edits neither of them.
+
+**G1-D.1 remains authoritative for public-facing framing.** The public identity of
+this repository is a collection of independently authored computational case
+studies. It is not publicly described as a portfolio, a homework archive, an
+assignment collection, or a course reconstruction.
+
+**In G4B-COV.1 the word *portfolio* denotes an internal objective, not a public
+identity.** It refers only to the owner's internal professional-use objective, and
+to the portfolio-grade quality standard to which the case studies are held, so
+that the completed work can serve as professional evidence of capability in
+computational science. The two readings are compatible and must not be conflated:
+the public artefact is a case-study collection, while the internal standard
+applied to it is portfolio-grade.
+
+**Superseded in meaning.** The sentence in G4B-COV.1 that describes the repository
+itself as a professional computational-science portfolio composed of independently
+authored case studies is superseded in meaning by the following public-safe
+formulation, which is the wording to use wherever that claim is restated:
+
+    The repository is a professional collection of independently authored
+    computational-science case studies, developed to portfolio-grade standards.
+
+The original G1-D.1 and G4B-COV.1 texts are left intact above. The tension between
+them is resolved here by reinterpretation, and is recorded rather than erased.
+
+**What this clarification does not change.** It does not weaken or modify the
+scientific-coverage completeness required by G4B-COV.1: where scientifically
+relevant, a completed public case study still contains analytical context or
+derivation, numerical outputs, appropriate statistical summaries, uncertainty
+information, reproducible plots, a quantitative comparison of theory against
+simulation, validation criteria, interpretation, limitations, and bounded
+scientific conclusions. It changes no rule governing permissible sources: the
+repository, together with properly cited public academic or official software
+sources, remains the sole implementation authority. It changes no scientific
+architecture, no implementation, no test, no execution preset, and no seed. It
+changes no Gate 4B or Gate 4C execution boundary, and no Git authority. It
+authorises no staging, commit, push, merge, tagging, or release. The
+high-throughput doctrine of G4B-COV.1 is unchanged: throughput is bought by
+eliminating redundant process, and never by reducing scientific rigour,
+reproducibility, validation, documentation quality, or independent review.
+
+**Status.** No executable and no configuration path changed under this
+clarification, and it generated no scientific evidence. **Gate 4B remains
+unaccepted** until a fresh independent framing re-audit passes.

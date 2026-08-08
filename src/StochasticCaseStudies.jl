@@ -22,8 +22,9 @@ The shared numerical layer currently provides execution presets, deterministic
 substream seeding, Brownian increments and their coarsening, summaries of
 independent and of correlated samples, and log-log convergence fitting. The
 shared reproducibility layer provides provenance capture, the atomic writer for
-versioned numerical reference summaries, and their validator. No case study has
-been implemented, so no case submodule exists yet.
+versioned numerical reference summaries, and their validator. One case submodule
+exists, `OrnsteinUhlenbeck`, holding the CS-06 pilot; the remaining nine are
+added at their own implementation gates.
 
 See `case-studies/README.md` for the planned case-study taxonomy and
 `docs/decisions.md` for the governing architectural decision record.
@@ -85,8 +86,11 @@ include("error_analysis.jl")
 # validates the preset vocabulary they fix, and nothing numerical depends on it.
 include("reproducibility.jl")
 
-# Case-study submodules are introduced at their respective implementation gates.
-# Nothing is defined here in advance, so that the surface of the package never
-# promises functionality that does not yet exist.
+# Case-study submodules are introduced at their respective implementation gates,
+# after the shared layer they consume, and nothing is defined here in advance, so
+# that the surface of the package never promises functionality that does not yet
+# exist. Each submodule exports nothing and is reached by qualification, as in
+# `StochasticCaseStudies.OrnsteinUhlenbeck.run_case_study`.
+include("OrnsteinUhlenbeck.jl")
 
 end # module StochasticCaseStudies
