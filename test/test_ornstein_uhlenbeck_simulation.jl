@@ -304,7 +304,7 @@ const OU_SIM_SAMPLES = 20_000
     @testset "type stability" begin
         @test @inferred(exact_step(Xoshiro(1), 0.5, 0.1, 1.0, 1.0, 1.0)) isa Float64
         @test @inferred(euler_step(Xoshiro(1), 0.5, 0.1, 1.0, 1.0, 1.0)) isa Float64
-        @test @inferred(exact_step(Xoshiro(1), 1, 1//10, 1, 1, 1)) isa Float64
+        @test @inferred(exact_step(Xoshiro(1), 1, 1 // 10, 1, 1, 1)) isa Float64
         @test @inferred(
             sample_exact_terminal(Xoshiro(1), 4, 1.0, 1.0, 1.0, 1.0, -1.0)
         ) isa Vector{Float64}

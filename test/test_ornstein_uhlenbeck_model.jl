@@ -321,6 +321,6 @@ end
         @test @inferred(relaxation_time(2)) isa Float64
         @test @inferred(stationary_variance(1, 2)) isa Float64
         @test @inferred(transient_mean(1, 1, 1, -1)) isa Float64
-        @test @inferred(finite_window_iat(1, 1//10, Int32(8))) isa Float64
+        @test @inferred(finite_window_iat(1, 1 // 10, Int32(8))) isa Float64
     end
 end

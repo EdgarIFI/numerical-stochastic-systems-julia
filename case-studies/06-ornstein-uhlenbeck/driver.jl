@@ -44,7 +44,8 @@
 
 using Random: Xoshiro
 
-using StochasticCaseStudies: PRESETS, capture_provenance, derive_seeds,
+using StochasticCaseStudies:
+    PRESETS, capture_provenance, derive_seeds,
     write_reference_summary
 using StochasticCaseStudies.OrnsteinUhlenbeck: CASE_SLUG, MASTER_SEED, SEED_SLOTS,
     ou_parameters, reference_parameters, reference_values, relaxation_time,
@@ -306,14 +307,18 @@ if PRESET === :figure
         ylabel = "density")
     hist!(axis_c, correlated.path;
         bins = 80, normalization = :pdf, color = (:steelblue, 0.55))
-    grid_c = collect(range(
-        parameters.mu - 5 * sqrt(stationary_var),
-        parameters.mu + 5 * sqrt(stationary_var);
-        length = 400,
-    ))
+    grid_c = collect(
+        range(
+            parameters.mu - 5 * sqrt(stationary_var),
+            parameters.mu + 5 * sqrt(stationary_var);
+            length = 400,
+        ),
+    )
     lines!(axis_c, grid_c,
-        [exp(-(x - parameters.mu)^2 / (2 * stationary_var)) /
-         sqrt(2 * pi * stationary_var) for x in grid_c];
+        [
+            exp(-(x - parameters.mu)^2 / (2 * stationary_var)) /
+            sqrt(2 * pi * stationary_var) for x in grid_c
+        ];
         color = :black, linewidth = 2.5, label = "exact invariant density")
     axislegend(axis_c; position = :rt, framevisible = false)
 
@@ -335,7 +340,7 @@ if PRESET === :figure
     # resimulated.
     windows = collect(0:parameters.maxlag)
     running_measured = [1 + 2 * sum(@view correlated.acf_empirical[2:(w+1)])
-                        for w in windows]
+     for w in windows]
     running_exact = [1 + 2 * sum(@view correlated.acf_analytic[2:(w+1)]) for w in windows]
     axis_e = Axis(fig[2, 2];
         title = "E. Integrated autocorrelation time",
