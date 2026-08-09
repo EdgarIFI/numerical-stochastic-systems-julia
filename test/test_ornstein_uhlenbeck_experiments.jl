@@ -23,13 +23,22 @@ using StochasticCaseStudies.OrnsteinUhlenbeck:
 
 # This file runs the case study at the **smoke preset only**. Neither the figure
 # nor the production preset is executed here: they cost orders of magnitude more,
-# and the evidence they produce belongs to a later gate rather than to continuous
-# integration. Nothing in this file writes a file, creates a directory, renders a
-# figure, or loads CairoMakie, and the first testset checks that the run left the
-# case directory exactly as it found it.
+# and the canonical evidence they produce already exists at its fixed repository
+# path. Nothing in this file writes a file, creates a directory, renders a figure,
+# or loads CairoMakie, and the first testset checks that the run left the case
+# directory exactly as it found it — the accepted canonical reference and figure
+# byte for byte included.
 
 const OU_ROOT = dirname(@__DIR__)
 const OU_CASE_DIRECTORY = joinpath(OU_ROOT, "case-studies", CASE_SLUG)
+
+# The accepted canonical evidence of this case, at the two fixed paths the driver
+# writes to under the figure and production presets. Neither preset is run here,
+# and the smoke computation must leave both files untouched.
+const OU_EVIDENCE_PATHS = (
+    joinpath(OU_CASE_DIRECTORY, "reference", "ornstein-uhlenbeck.toml"),
+    joinpath(OU_CASE_DIRECTORY, "figures", "ornstein-uhlenbeck.png"),
+)
 
 """
     ou_tree(directory) -> Vector{String}
@@ -47,6 +56,21 @@ function ou_tree(directory::AbstractString)
     end
     return sort!(entries)
 end
+
+"""
+    ou_evidence_bytes() -> Vector{Vector{UInt8}}
+
+Read the accepted canonical evidence of this case — the production reference
+summary and the figure — as raw byte vectors, in the fixed order of
+`OU_EVIDENCE_PATHS`.
+
+`run_case_study` computes and returns; it writes nothing at any preset, and
+writing is the driver's business. Comparing these bytes before and after the
+smoke run establishes that directly, on the two files themselves rather than on a
+directory listing, which would report a rewritten file of the same name as no
+change at all.
+"""
+ou_evidence_bytes() = [read(path) for path in OU_EVIDENCE_PATHS]
 
 """
     ou_carries_unsigned(value) -> Bool
@@ -116,14 +140,21 @@ const OU_SYNTHETIC_BIAS_ZERO = [0.12, 0.06, 0.0]
 const OU_SYNTHETIC_BIAS_NEGATIVE = [0.12, 0.06, -0.001]
 
 const OU_TREE_BEFORE = ou_tree(OU_CASE_DIRECTORY)
+const OU_EVIDENCE_BEFORE = ou_evidence_bytes()
 const OU_SMOKE = run_case_study(:smoke)
 const OU_TREE_AFTER = ou_tree(OU_CASE_DIRECTORY)
+const OU_EVIDENCE_AFTER = ou_evidence_bytes()
 
 @testset "Ornstein–Uhlenbeck experiments" begin
     @testset "the smoke run writes nothing" begin
         @test OU_TREE_AFTER == OU_TREE_BEFORE
-        @test !isdir(joinpath(OU_CASE_DIRECTORY, "figures"))
-        @test !isdir(joinpath(OU_CASE_DIRECTORY, "reference"))
+        # The accepted canonical evidence exists at its two fixed paths, and the
+        # smoke computation leaves both byte-identical. This is stronger than
+        # asserting that the directories are absent, which they no longer are: a
+        # file rewritten in place keeps its name and its position in the tree
+        # listing, and only the bytes would show it.
+        @test all(isfile, OU_EVIDENCE_PATHS)
+        @test OU_EVIDENCE_AFTER == OU_EVIDENCE_BEFORE
         @test !isdir(joinpath(OU_ROOT, "results"))
         # The smoke preset is not eligible to write a reference summary at all;
         # only production is, and it is not run here.
@@ -787,10 +818,10 @@ const OU_TREE_AFTER = ou_tree(OU_CASE_DIRECTORY)
             @test !ou_carries_unsigned(with_fit)
         end
 
-        # J. Neither branch writes a file or creates a directory.
+        # J. Neither branch writes a file or creates a directory, and neither
+        # touches the accepted canonical evidence at its two fixed paths.
         @test OU_TREE_AFTER == ou_tree(OU_CASE_DIRECTORY)
-        @test !isdir(joinpath(OU_CASE_DIRECTORY, "reference"))
-        @test !isdir(joinpath(OU_CASE_DIRECTORY, "figures"))
+        @test ou_evidence_bytes() == OU_EVIDENCE_BEFORE
         @test !isdir(joinpath(OU_ROOT, "results"))
     end
 

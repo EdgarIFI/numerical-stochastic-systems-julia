@@ -4,8 +4,8 @@ How random number generation is controlled. The policy exists so that every
 stochastic result in this repository can be traced to a declared seed, and so
 that no result depends on hidden global state.
 
-Sections marked **planned** describe requirements that later gates must satisfy;
-they are not yet implemented, because no case study has been implemented.
+Sections marked **planned** describe requirements that later work must satisfy;
+they are not yet implemented.
 
 ## Generators are passed, never assumed
 

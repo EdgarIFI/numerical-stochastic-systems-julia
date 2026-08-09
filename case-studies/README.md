@@ -5,13 +5,14 @@ The ten case studies of *Stochastic Systems in Julia*, in their frozen order.
 The numbering, order, slugs, and titles below are fixed and will not change:
 directory names and cross-references depend on them.
 
-A case-study directory is created only when the corresponding implementation gate
-begins. Nothing below is a link, because no case-study directory exists yet.
+A case-study directory is created only when the corresponding implementation
+begins, so a slug below is a link exactly when its directory exists.
 
 ## Status
 
-Every case is currently **Planned**. No case study has been implemented, and no
-numerical result, figure, or validated value exists in this repository.
+One case is **Complete (pilot)**, CS-06, with its figure, its numerical reference
+summary, and its validated values. The remaining nine are **Planned**, and no
+numerical result, figure, or validated value exists for any of them.
 
 | ID | Slug | Title | Part | Tier | Status |
 | --- | --- | --- | --- | --- | --- |
@@ -20,7 +21,7 @@ numerical result, figure, or validated value exists in this repository.
 | CS-03 | `03-poisson-processes` | Poisson Counting Processes: Exact Simulation and the Bernoulli Limit | II | A | Planned |
 | CS-04 | `04-stochastic-sir` | Stochastic SIR Epidemics: Exact Gillespie Simulation and the Master Equation | II | B | Planned |
 | CS-05 | `05-wiener-process` | The Wiener Process and Diffusive Scaling | III | A | Planned |
-| CS-06 | `06-ornstein-uhlenbeck` | Ornstein–Uhlenbeck Dynamics: Mean Reversion and Numerical Convergence Orders | III | B | Planned |
+| CS-06 | [`06-ornstein-uhlenbeck`](06-ornstein-uhlenbeck/) | Ornstein–Uhlenbeck Dynamics: Mean Reversion and Numerical Convergence Orders | III | B | Complete (pilot) |
 | CS-07 | `07-ising-model` | Phase Transitions in the Two-Dimensional Ising Model | IV | C | Planned |
 | CS-08 | `08-disk-packing` | Bidisperse Disk Packing by Simulated Annealing | IV | B | Planned |
 | CS-09 | `09-langevin-diffusion` | Free Langevin Dynamics and the Einstein Relation | V | B | Planned |

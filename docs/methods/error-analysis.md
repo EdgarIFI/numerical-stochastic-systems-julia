@@ -211,22 +211,23 @@ candidate, together with the bounded corrections of Gate 3C-C.1: the schema, the
 provenance capture, the atomic writer, and the path-aware validator all exist,
 and [reproducibility.md](reproducibility.md) describes what they enforce.
 
-Implementation is not the same as having something to report with, and four
+Implementation is not the same as having something to report with, and three
 things follow.
 
-- **No scientific reference summary exists.** No case study has reached its
-  implementation gate, so the repository contains no reference values, and no
-  committed number is claimed to have been reproduced.
-- **No scientific tolerance comparison exists.** Validation establishes that a
-  record is well formed, complete, and in the right place; it makes no numerical
-  comparison at all. `tolerance_abs` and `tolerance_rel` are recorded by the
-  schema now so that the comparison introduced with the first case study has
-  something to compare against.
-- **The acceptance bands of this document remain unimplemented**, as stated
-  above: the schema records the result of an error analysis rather than
-  performing one.
-- **Gate 3 remains open**, pending the re-audit of the Gate 3C-C.1 corrections
-  and the owner's acceptance.
+- **One scientific reference summary exists**, that of the CS-06 pilot. The other
+  nine cases have produced no reference values, and no number outside that one
+  record is claimed to have been reproduced.
+- **No generic scientific tolerance comparison exists.** Schema validation
+  establishes that a record is well formed, complete, and in the right place; it
+  makes no numerical comparison at all. Semantic checking of a persisted record —
+  recomputing its analytical references and its recorded discrepancies, and
+  applying the case's own acceptance criteria — is done by that case's reference
+  test, and is a different thing again from a fresh numerical reproduction of the
+  run. `tolerance_abs` and `tolerance_rel` are recorded by the schema so that a
+  generic comparison has something to compare against when it is introduced.
+- **The acceptance bands of this document remain unimplemented as automation**,
+  as stated above: the schema records the result of an error analysis rather than
+  performing one, and a case that enforces a band does so in its own tests.
 
 ## Related documents
 

@@ -1751,3 +1751,200 @@ reproducibility, validation, documentation quality, or independent review.
 **Status.** No executable and no configuration path changed under this
 clarification, and it generated no scientific evidence. **Gate 4B remains
 unaccepted** until a fresh independent framing re-audit passes.
+
+---
+
+## Gate 4C — CS-06 canonical evidence, reference test, and documentation reconciliation
+
+**Ratified 2026-08-09.** Gate 4B closed as an accepted publication baseline, and
+CS-06 has since produced the two evidence artefacts G4A-D.15 and G4A-D.16
+authorise. This entry records their identities, the runtime test that protects
+what they assert, and the repository-content and documentation repairs that the
+existence of evidence made necessary. It is appended; no earlier entry is
+altered.
+
+### The accepted source baseline
+
+The evidence was produced from, and is bound to, exactly one source state:
+
+    commit:  3358fe8706866cd952cd80005dec1ee5b21a7710
+    tree:    1c7beb79445fff70202db04d5cf2b839daa92752
+
+Provenance capture requires a clean working tree, so that commit alone identifies
+the code and the committed manifest, and therefore the environment in which the
+production run was performed.
+
+### The accepted reference identity
+
+    path:    case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml
+    SHA-256: 50b05755776ff6f3d01a8f85f9473ab0c8a2929af513967567e5f8b153ac5d11
+    bytes:   8948
+    schema:  1
+
+The record carries the resolved production parameters, the provenance of the run,
+and nineteen `[values]` tables: ten transient results at the five canonical
+times, two stationary results, one correlated result carrying the whole
+correlation analysis, five Euler endpoint variances, and one Euler log-log fit.
+
+### The accepted figure identity
+
+    path:    case-studies/06-ornstein-uhlenbeck/figures/ornstein-uhlenbeck.png
+    SHA-256: f11397f306a113f788e3249e0fee18cd70313b8a9dd0bdd0d87610d91c348fca
+    bytes:   694156
+
+### Byte identity is governance, not a runtime assertion
+
+The two digests above are **governance identities**. They fix which artefacts
+were accepted, and they belong in this record, where a reader compares them
+against the files deliberately.
+
+**The runtime reference test hard-codes no artefact hash**, neither the reference
+digest nor the figure digest, and asserts no figure dimension and no pixel. A
+test that pinned a digest would fail on any re-derivation of an equally valid
+record while saying nothing about whether the numbers in it are right, and it
+would make an accepted scientific contract hostage to a serialisation detail.
+
+What the test asserts instead is the **scientific contract** of the record, and
+one identity: `provenance.git_commit` is required to equal
+`3358fe8706866cd952cd80005dec1ee5b21a7710` exactly. That is the semantic link
+between the evidence and the source baseline that produced it, and it is the
+reason no digest needs to be asserted at run time.
+
+**No stochastic measured value is hard-coded in the test.** No Monte Carlo mean,
+variance, standard error, autocorrelation, integrated autocorrelation time,
+effective sample size, or fitted slope appears in it as a literal. Each is read
+from the record and judged against a quantity recomputed from the accepted model
+functions, so that a re-derivation under the ratified parameters is judged by the
+contract rather than against the digits of one particular run. The generated
+timestamp, the operating system, the thread count, and the contextual Julia
+version are likewise not asserted as cross-platform runtime requirements.
+
+### The canonical reference test
+
+    test/test_ornstein_uhlenbeck_reference.jl
+
+registered in [../test/runtests.jl](../test/runtests.jl) immediately after
+`test_ornstein_uhlenbeck_experiments.jl`, as G4A-D.14 fixed. It parses the
+persisted record and:
+
+- calls the shared `validate_reference_summary` at the canonical logical path and
+  requires an empty problem vector — the schema contract stays owned by the
+  shared validator and is not reimplemented;
+- asserts the provenance case, preset, generator, master seed, driver path, and
+  the exact Git commit above;
+- compares the recorded parameters against the production parameter set the
+  implementation's own resolver returns, and requires that no `euler_horizon` and
+  no `reference_eligible` field exists among them;
+- asserts the complete nineteen-key `[values]` set, so that a missing table fails
+  legibly;
+- recomputes every recorded analytical reference from the accepted model
+  functions and requires agreement at floating-point tolerance;
+- applies the four-standard-error criterion of G4A-D.7 to the eighteen entries
+  for which the architecture defines an n-sigma comparison, and requires each
+  recorded `nsigma` to be internally consistent with that entry's own value,
+  reference, and standard error. `euler_fit_slope` carries no `nsigma` and is
+  judged by the absolute slope criterion of G4A-D.10 instead;
+- protects the finite-window autocorrelation convention of G4A-D.8: the recorded
+  comparator is required to agree with the shared truncated-window estimator over
+  the same window and to lie strictly below the infinite-window limit, the
+  relative error to be at most `0.10` and internally consistent, the analytical
+  autocorrelation series to be `exp(−κkh)` on the recorded lag grid, the array
+  lengths to be `maxlag + 1`, the root mean squared error to be at most `0.015`
+  and internally consistent, and the effective sample size to satisfy
+  `ess ≈ n / τ_int` with `1 < ess ≤ n`;
+- requires exactly the five ratified Euler steps, and at each of them validates
+  the analytical Euler invariant variance, the exact stationary variance, the
+  analytical signed bias, the **signed** empirical bias as the difference between
+  the measured endpoint variance and the exact stationary variance, and the
+  internal consistency of the recorded discrepancy. No absolute value is applied
+  to the empirical bias and no point is dropped;
+- requires the fit evidence to exist, its five-point arrays to correspond exactly
+  to the Euler grid and to the per-step recorded evidence, the slope discrepancy
+  to be at most `0.20`, and `r² ≥ 0.95`;
+- traverses every string of the parsed record and rejects machine-local absolute
+  path leakage, while accepting the legitimate repository-relative driver path;
+- asserts that the figure exists and begins with the eight-byte PNG signature,
+  and nothing further about it.
+
+The test runs no simulation at any preset, renders no figure, and writes nothing.
+
+### Repository-content test repairs
+
+Two sets of assertions in the existing suite were made false by the existence of
+evidence, and were repaired rather than deleted.
+
+**Four evidence-directory absence assertions**, in
+[../test/test_ornstein_uhlenbeck_experiments.jl](../test/test_ornstein_uhlenbeck_experiments.jl),
+required `figures/` and `reference/` not to exist. They are replaced by a
+stronger invariant: the two canonical files are required to exist, their bytes
+are read before the existing smoke computation and again after it, and the two
+byte vectors must be identical. That proves non-mutation by the smoke workflow on
+the files themselves, where a directory listing would report a file rewritten in
+place as no change at all. No accepted digest is hard-coded there: governance
+identity is this record's business, not that test's. The `results/` absence
+assertions are retained unchanged, and no scientific fixture, seed, sample size,
+tolerance, or smoke semantic is altered.
+
+**One empty-register assertion**, in
+[../test/test_reproducibility.jl](../test/test_reproducibility.jl), required the
+discovered reference-file list of the repository to be empty. It is replaced by
+the exact single-reference inventory
+`case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml`.
+
+**No `src/` file changed**, and the frozen Gate 3 shared layer is not reopened by
+either repair.
+
+### Superseded pre-evidence statements
+
+The statements below were true when recorded and are retained unaltered as
+historical record, in the manner G3-CORR.8 established. They are **superseded**
+by this entry:
+
+- every claim that CS-06 has no figure and no reference summary, and that the
+  `figures/` and `reference/` directories do not exist — both directories exist
+  and each holds the artefact identified above;
+- the claim that `test/test_ornstein_uhlenbeck_reference.jl` has not been written
+  — it exists and is registered;
+- the count of completed public case studies as **0 of 10** — CS-06 is complete
+  as a pilot, and the count is **1 of 10**;
+- the statement in [methods/reproducibility.md](methods/reproducibility.md) that
+  no reference summary exists and that an empty register is the expected state,
+  and the corresponding statements in
+  [methods/error-analysis.md](methods/error-analysis.md) and
+  [methods/rng-and-seeding.md](methods/rng-and-seeding.md), each of which is
+  reconciled in place under this gate.
+
+### Status
+
+The public status of CS-06 is **Complete (pilot)**, and that exact wording is
+used in the root `README.md` and in `case-studies/README.md`. It means that the
+scientific pilot is complete: the evidence exists, the reference test passes, and
+the documentation states findings drawn from the production record alone.
+
+It does **not** mean released, merged, tagged, pull-request-ready, or `v0.1.0`.
+The work of this gate is an **uncommitted candidate**. It has not been staged,
+committed, or pushed, it has not been audited, and it has not been accepted. An
+implementation does not accept itself. Nothing in this entry authorises staging,
+commit, push, merge, tagging, or release; every such operation remains the
+owner's, separately and explicitly.
+
+All public quantitative CS-06 findings are drawn from the production reference
+summary. The figure is rendered at the smaller figure-preset sample counts, and
+no figure-scale diagnostic — its autocorrelation root mean squared error, its
+integrated autocorrelation time, its effective sample size, or its fitted slope —
+is published as a canonical finding.
+
+### Explicit non-scope
+
+This gate authorises none of the following, and none occurred:
+
+- any change to the shared numerical or reproducibility core under `src/`;
+- any dependency change;
+- any continuous-integration change;
+- any seed, preset, sample-size, or tolerance change;
+- any regeneration, normalisation, reformatting, recompression, movement,
+  deletion, or replacement of either accepted artefact;
+- any bibliography entry — no external source specific to the
+  Ornstein–Uhlenbeck process is cited, every analytical relation the case uses
+  being derived in its own README from the equation;
+- any Git mutation.

@@ -478,14 +478,26 @@ and never invokes Git.
 establishes that the record is well formed, complete, and in the right place. It
 does **not** establish that the numbers in it are correct, that they were ever
 reproduced, or that the case study behind them is finished. Tolerance-based
-comparison of committed reference values against freshly computed results is
-introduced together with the first case study, and `tolerance_abs` and
-`tolerance_rel` are recorded now so that it has something to compare against.
+comparison of committed reference values against freshly computed results is not
+implemented here, and `tolerance_abs` and `tolerance_rel` are recorded by the
+schema so that it has something to compare against when it is.
 
-**No reference summary exists yet.** No case study has reached its implementation
-gate, so there are no reference values in this repository, and no claim is made
-that any result has been verified. An empty register is the expected state, and
-the script reports it as a pass.
+**One reference summary is registered**, that of the CS-06 pilot, at
+`case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml`. The
+script discovers it, parses it, and validates it against the schema and its
+committed location, and reports a pass on that basis alone.
+
+**Semantic regression checking of that record belongs to the case study, not to
+this script.** `test/test_ornstein_uhlenbeck_reference.jl` reads the persisted
+summary, recomputes every analytical reference in it from the case's own model
+functions, recomputes every recorded discrepancy from the record's own value,
+reference, and standard error, and applies the case's ratified acceptance
+criteria. It runs no simulation and pins no artefact digest. The division of
+labour is deliberate and neither half should be overstated: the script checks
+schema, discovery, and reproducibility structure for every case; the reference
+test checks that one case's persisted numbers still say what the case claims they
+say. Neither reruns the production experiment, and neither is a fresh numerical
+reproduction of it.
 
 ## What implementation does and does not establish
 
@@ -495,15 +507,17 @@ corrections of Gate 3C-C.1, and the Windows reference-alias correction G3-CORR.7
 applied under Gate 3C-C.2. That is a statement about machinery, and it must not
 be read as a statement about science.
 
-**Implementation does not mean a scientific case is complete.** The repository
-contains no case directory, no driver, no figure, no dataset, and no reference
-summary; no number has been recorded, compared, or reproduced; and no tolerance
-comparison exists to make. Having a correct instrument is not the same as having
-taken a measurement with it.
+**Implementation does not mean every scientific case is complete.** One case
+directory exists, with its driver, its figure, and its reference summary: the
+CS-06 pilot. The other nine cases have produced nothing, and for them no number
+has been recorded, compared, or reproduced. Having a correct instrument is not
+the same as having taken a measurement with it, and having taken one measurement
+is not the same as having taken ten.
 
-Gate 3 accordingly **remains open**, pending an independent re-audit of the
-Gate 3C-C.1 and Gate 3C-C.2 corrections and the owner's acceptance. Nothing
-described here has been staged, committed, or published.
+The tolerance comparison described above remains unimplemented for every case,
+CS-06 included: its record is validated for structure by this script and for
+scientific content by the case's own reference test, and neither of those is the
+generic tolerance-based comparison this document reserves the schema fields for.
 
 ## Related documents
 

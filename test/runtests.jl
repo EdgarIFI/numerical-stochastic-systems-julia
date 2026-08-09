@@ -87,7 +87,11 @@ include("test_error_analysis.jl")
 # The shared reproducibility layer, in the same one-file-per-source-file pattern.
 include("test_reproducibility.jl")
 
-# CS-06, the Ornstein–Uhlenbeck pilot, in the same pattern over its submodule.
+# CS-06, the Ornstein–Uhlenbeck pilot, in the same pattern over its submodule. The
+# first three files test the submodule's own code; the fourth validates the
+# persisted production evidence at its canonical repository path, running no
+# simulation of its own.
 include("test_ornstein_uhlenbeck_model.jl")
 include("test_ornstein_uhlenbeck_simulation.jl")
 include("test_ornstein_uhlenbeck_experiments.jl")
+include("test_ornstein_uhlenbeck_reference.jl")

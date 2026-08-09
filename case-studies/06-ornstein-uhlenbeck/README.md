@@ -2,11 +2,13 @@
 
 Part III — Diffusion and Stochastic Differential Equations. Depth tier B.
 
-**Status: implementation baseline.** The source, the driver, and the tests exist
-and run. No figure and no numerical reference summary have been produced or
-committed, and no scientific value is reported here yet; both remain for the
-evidence gate, Gate 4C-E.1. See *Results* and *Validation* below for exactly what
-is and is not established.
+**Status: Complete (pilot).** The source, the driver, and the tests exist and
+run, and the case now has its canonical evidence at the two fixed paths of this
+directory: the production reference summary
+[reference/ornstein-uhlenbeck.toml](reference/ornstein-uhlenbeck.toml) and the
+figure [figures/ornstein-uhlenbeck.png](figures/ornstein-uhlenbeck.png). Every
+quantitative finding reported below is read from that reference summary. See
+*Results* and *Validation* for exactly what is and is not established.
 
 ## 1. Overview and question
 
@@ -471,50 +473,94 @@ sets out.
 
 ## 7. Results
 
-**No results are reported yet, and none has been published.** This section
-records what the implemented baseline computes and what remains for Gate 4C-E.1.
+The case has two evidence artefacts, at fixed paths in this directory.
 
-Running the driver produces, in memory and on the console:
+- **The figure:**
+  [figures/ornstein-uhlenbeck.png](figures/ornstein-uhlenbeck.png).
+- **The numerical reference summary:**
+  [reference/ornstein-uhlenbeck.toml](reference/ornstein-uhlenbeck.toml).
 
-- the transient mean and variance at each of the five times, each with its
-  analytical value, its standard error, and its discrepancy in standard errors;
-- the stationary mean and variance, likewise;
-- the correlated path's measured integrated autocorrelation time, the
-  finite-window analytical value, their relative difference, the effective sample
-  size, the autocorrelation-corrected standard error of the mean, and the root
-  mean squared difference between the measured and exact autocorrelation series
-  over the window;
-- the Euler endpoint variance at each step size against $`v_{\mathrm{EM}}(h)`$,
-  the measured and exact biases, the log-log fit of the exact bias sequence, and
-  the log-log fit of the measured one where every measured bias on the grid is
-  strictly positive and that fit is therefore defined;
-- a handful of representative trajectories, which are illustrative and from which
-  nothing is estimated.
+### The figure
 
-What does **not** yet exist:
+Six panels in a two-by-three layout.
 
-- **no committed figure.** The driver's figure branch is implemented and renders
-  a two-by-three panel — mean reversion with representative trajectories, the
-  growth of the variance, the stationary marginal, the autocorrelation, the
-  integrated autocorrelation time against the summation window, and the Euler
-  bias — to `figures/ornstein-uhlenbeck.png`. That branch has not been executed,
-  the `figures/` directory has not been created, and no PNG exists.
-- **no committed reference summary.** The assembly of the schema version 1
-  parameters and values is implemented and is checked against the shared
-  validator in the test suite as an in-memory candidate. The production branch
-  that would capture provenance and write
-  `reference/ornstein-uhlenbeck.toml` has not been executed, the `reference/`
-  directory has not been created, and no TOML file exists.
-- **no reported numerical value.** No number produced by this case is published,
-  cited, or claimed to have been reproduced.
+| Panel | Content |
+| --- | --- |
+| A | Mean reversion: twelve representative trajectories, the exact mean $`m(t)`$, the measured transient means with four-standard-error intervals, and the long-run mean $`\mu`$ |
+| B | Growth of the variance: the exact $`v(t)`$, the measured transient variances with four-standard-error intervals, and the stationary value $`v_\infty`$ |
+| C | The stationary marginal: a histogram of the long stationary path with the exact invariant density drawn over it |
+| D | The autocorrelation: the measured $`\rho_k`$ against the exact $`\mathrm{e}^{-\kappa\tau}`$ over the lag window |
+| E | The integrated autocorrelation time as a function of the summation window $`L`$, measured against the finite-window analytical value, annotated with the effective sample size and the corrected standard error |
+| F | The Euler stationary-variance bias against the step, on a logarithmic step axis and a **linear** signed-bias axis, with the complete four-standard-error intervals and a line at zero |
+
+The figure is rendered by the driver's `figure` preset, whose sample counts are
+smaller than the production ones — 30 000 draws per ensemble and a 100 000-point
+path. It is a visualisation of the same experiments at a visualisation scale, and
+**no number read off it is a reported result.** Every quantitative finding below
+comes from the production reference summary instead.
+
+### Production findings
+
+From the production preset: 200 000 draws per transient time, 200 000 stationary
+draws, a 250 000-point correlated path at $`h = 0.1`$ over a window of 80 lags,
+and 200 000 Euler endpoints at each of the five steps. Discrepancies are given in
+standard errors, against the four-standard-error threshold of the repository.
+
+| Quantity | Compared against | Production result |
+| --- | --- | ---: |
+| transient means, five times | $`m(t)`$, closed form | within 1.493 SE |
+| transient variances, five times | $`v(t)`$, closed form | within 0.588 SE |
+| stationary mean | $`\mu = 1`$ | 1.518 SE |
+| stationary variance | $`v_\infty = 0.5`$ | 1.008 SE |
+| correlated mean | $`\mu = 1`$ | 0.776 SE |
+| measured $`\tau_{\mathrm{int}} = 19.379`$ | $`\tau_{80} = 20.010`$, same window | 3.152 % relative |
+| effective sample size, 250 000 points | — | 12 900.2 |
+| measured autocorrelation, 81 lags | $`\mathrm{e}^{-\kappa k h}`$ | RMSE 0.004923 |
+| Euler endpoint variances, five steps | $`v_{\mathrm{EM}}(h)`$, closed form | within 1.585 SE |
+| empirical log-log slope $`1.0539 \pm 0.0254`$ | 1.0723, exact bias, same grid | 0.0184 absolute |
+| Euler fit $`R^2`$ | — | 0.99827 |
+
+Read together, these say four things.
+
+**The exactly sampled ensembles reproduce their closed forms.** Every transient
+and stationary moment lies within 1.52 standard errors of its analytical value,
+on ensembles of 200 000 draws whose standard errors are of order $`10^{-3}`$.
+Nothing here is a marginal agreement rescued by a loose tolerance.
+
+**The correlation structure is measured, and it matters.** The 250 000-point path
+has an integrated autocorrelation time of about 19.4 observation steps, so its
+effective sample size is 12 900 — about one nineteenth of its length. Treating
+such a path as 250 000 independent observations would understate the uncertainty
+of its mean by a factor of about $`\sqrt{19.4} \approx 4.4`$. The measured value
+agrees with the analytical value **summed over the same finite window** to 3.15 %,
+and the measured autocorrelation series agrees with $`\mathrm{e}^{-\kappa k h}`$
+with a root mean squared difference of 0.0049.
+
+**The Euler chain is overdispersed, by exactly the predicted amount.** At each of
+the five steps the measured endpoint variance agrees with the Euler recursion's
+own invariant variance $`v_{\mathrm{EM}}(h)`$ to within 1.59 standard errors, and
+the measured signed bias relative to $`v_\infty`$ tracks the exact
+$`b_{\mathrm{EM}}(h)`$ from 0.122 at $`h = 0.4`$ down to 0.0066 at
+$`h = 0.025`$.
+
+**The fitted slope describes the grid that was tested.** The measured log-log
+slope 1.0539 ± 0.0254 agrees with the slope 1.0723 obtained by fitting the exact
+bias formula over the same five steps, to 0.0184. Both exceed one because the
+exact bias is not a pure power law on this grid; neither is a measurement of an
+asymptotic order, and none is claimed.
+
+The complete record — every value, its standard error, its analytical reference,
+its discrepancy in standard errors, the full 81-point autocorrelation series, and
+the provenance of the run — is in the reference summary.
 
 ## 8. Validation
 
-The comparisons the case performs, and the thresholds they are judged against,
-are implemented. The **evidence** they will produce at the production preset
-belongs to Gate 4C-E.1.
+Every comparison below is performed by the case at every preset, and the
+production evidence recorded in the reference summary satisfies every ratified
+threshold. The numbers are those of that summary, stated again here beside the
+criterion each was judged against.
 
-### Implemented comparisons
+### Comparisons performed
 
 | Quantity | Reference | Uncertainty |
 | --- | --- | --- |
@@ -528,7 +574,7 @@ belongs to Gate 4C-E.1.
 | Euler endpoint variance at each $`h`$ | $`v_{\mathrm{EM}}(h)`$, closed form | $`v_{\mathrm{EM}}(h)\sqrt{2/(n-1)}`$ |
 | Euler measured bias at each $`h`$ | $`b_{\mathrm{EM}}(h)`$, closed form | inherited from the variance |
 
-### Acceptance thresholds
+### Acceptance thresholds, and what the production evidence achieved
 
 Discrepancies in standard errors are judged against the repository-wide threshold
 of four standard errors fixed in
@@ -536,17 +582,32 @@ of four standard errors fixed in
 That applies to every independent mean and every independent Gaussian sample
 variance in the table above.
 
-For the correlated regime, the thresholds intended for the production preset are
-a mean discrepancy within four standard errors, a relative difference between the
-measured and finite-window integrated autocorrelation times of at most 0.10, and
-an autocorrelation root mean squared error of at most 0.015; the figure preset
-admits 0.025 for the last of these. **These are contracts for the evidence gate
-and are computed but not enforced at the smoke preset**, whose 20 000-point path
-is not the evidence they are written for. What the test suite checks of the smoke
-correlated run is structural: that every output is finite, that
-$`\tau_{\mathrm{int}} > 1`$, that $`1 < n_{\mathrm{eff}} \le n`$, that the
-corrected standard error is positive and larger than the independent one, and
-that the array lengths and the window agree.
+| Criterion | Threshold | Production value |
+| --- | ---: | ---: |
+| every recorded discrepancy in standard errors | $`\le 4`$ | max 1.585 |
+| relative error of the finite-window $`\tau_{\mathrm{int}}`$ | $`\le 0.10`$ | 0.031524 |
+| autocorrelation root mean squared error | $`\le 0.015`$ | 0.004923 |
+| discrepancy between the empirical and exact-bias slopes | $`\le 0.20`$ | 0.018379 |
+| coefficient of determination of the empirical fit | $`\ge 0.95`$ | 0.998266 |
+
+All five hold with room to spare. The largest discrepancy anywhere in the record
+is 1.585 standard errors, on the Euler endpoint variance at $`h = 0.4`$; every
+other one is smaller.
+
+The correlated thresholds are production contracts. **They are computed but not
+enforced at the smoke preset**, whose 20 000-point path is not the evidence they
+are written for; the figure preset admits 0.025 for the autocorrelation root mean
+squared error. What the test suite checks of the smoke correlated run is
+structural: that every output is finite, that $`\tau_{\mathrm{int}} > 1`$, that
+$`1 < n_{\mathrm{eff}} \le n`$, that the corrected standard error is positive and
+larger than the independent one, and that the array lengths and the window agree.
+
+The production record itself is checked by a test of its own, which reads the
+persisted summary, recomputes every analytical reference in it from the model
+functions, recomputes every discrepancy from the record's own value, reference,
+and standard error, and applies the five criteria above. That test runs no
+simulation and pins no artefact digest: it protects the scientific contract of
+the record, not its byte serialisation.
 
 The smoke preset's statistical checks — the four-standard-error tests on every
 transient and stationary moment and on every Euler endpoint variance — are part
@@ -565,8 +626,6 @@ distributional fit is performed.
 
 ## 9. Limitations
 
-- **Nothing is published yet.** No figure, no reference summary, and no reported
-  value. The case study is not complete.
 - **No strong convergence result.** The case measures the bias of a stationary
   quantity, not pathwise accuracy. Strong pathwise convergence, pathwise Brownian
   coupling between the exact and Euler schemes, and multilevel Monte Carlo are
@@ -635,14 +694,17 @@ preset.
 - **`figure`** — additionally renders the figure. It requires
   `case-studies/06-ornstein-uhlenbeck/figures/` to exist already; the driver
   refuses to create it, because creating a directory implicitly is how a mistyped
-  case slug becomes a second, silently empty case directory. That directory does
-  not exist at present and this preset has not been run.
+  case slug becomes a second, silently empty case directory. This preset produced
+  the canonical figure at
+  [figures/ornstein-uhlenbeck.png](figures/ornstein-uhlenbeck.png).
 - **`production`** — additionally captures provenance and writes the reference
   summary. It requires the preset to be eligible and
   `case-studies/06-ornstein-uhlenbeck/reference/` to exist already, and
   provenance capture requires a clean working tree, so the recorded commit alone
-  identifies the code and the committed manifest. That directory does not exist
-  at present and this preset has not been run.
+  identifies the code and the committed manifest. This preset produced the
+  canonical reference summary at
+  [reference/ornstein-uhlenbeck.toml](reference/ornstein-uhlenbeck.toml), whose
+  provenance records the commit it was run from.
 
 The master seed is `6_060_606` and the canonical environment is Julia 1.12.6 with
 the committed `Manifest.toml`. Exact reproduction is claimed for that
@@ -666,12 +728,12 @@ Euler–Maruyama recursion are all obtained here rather than quoted.
 
 The implementation is written in Julia [1].
 
-**Final public citations for this case remain for Gate 4C-E.1.** No external
-source specific to the Ornstein–Uhlenbeck process is cited yet, and
-[../../docs/references.bib](../../docs/references.bib) is deliberately unchanged
-by this gate: an entry is added only when its bibliographic metadata has been
-verified against an authoritative record, and none has been verified for this
-case.
+**No external source specific to the Ornstein–Uhlenbeck process is cited here.**
+Every analytical relation this case uses is derived above from the equation
+itself, so none of them rests on a citation, and
+[../../docs/references.bib](../../docs/references.bib) is deliberately unchanged:
+an entry is added only when its bibliographic metadata has been verified against
+an authoritative record.
 
 1. Bezanson, J., Edelman, A., Karpinski, S., and Shah, V. B. *Julia: A Fresh
    Approach to Numerical Computing*. SIAM Review **59**(1), 65–98, 2017.

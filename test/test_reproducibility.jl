@@ -2637,8 +2637,10 @@ end
         @testset "the repository root is located from the script" begin
             @test realpath(VERIFIER.repository_root()) == realpath(ROOT)
             @test isfile(joinpath(VERIFIER.repository_root(), "Project.toml"))
-            # The committed repository still verifies, and registers nothing.
-            @test isempty(VERIFIER.reference_files(ROOT))
+            # The repository registers exactly one reference summary, the CS-06
+            # pilot's, at the canonical location the schema requires.
+            @test [file.logical for file in VERIFIER.reference_files(ROOT)] ==
+                  ["case-studies/06-ornstein-uhlenbeck/reference/ornstein-uhlenbeck.toml"]
         end
     end
 end

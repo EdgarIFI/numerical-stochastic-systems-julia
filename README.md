@@ -16,11 +16,11 @@ The repository is under active construction on an audited development branch, an
 is merged to `main` only when a milestone is complete.
 
 What exists today is the shared package scaffold, the pinned Julia environment,
-the continuous-integration configuration, and the governing documentation. **No
-case study has been implemented yet**: there are as yet no numerical results, no
-figures, and no validated values to inspect. A case-study directory is created
-only when its implementation gate begins, starting with CS-06, so the absence of
-a directory below is deliberate rather than an oversight.
+the continuous-integration configuration, the governing documentation, and **one
+completed case study, the CS-06 pilot**, with its figure, its numerical reference
+summary, and its validated values. The remaining nine are planned: a case-study
+directory is created only when its implementation begins, so the absence of a
+directory below is deliberate rather than an oversight.
 
 The first public milestone, `v0.1.0`, follows the completion of the scaffold, the
 shared infrastructure, and the CS-06 pilot. Version `v1.0.0` requires all ten
@@ -39,7 +39,7 @@ which also records the conceptual prerequisites between cases.
 | CS-03 | Poisson Counting Processes: Exact Simulation and the Bernoulli Limit | II | A | Planned |
 | CS-04 | Stochastic SIR Epidemics: Exact Gillespie Simulation and the Master Equation | II | B | Planned |
 | CS-05 | The Wiener Process and Diffusive Scaling | III | A | Planned |
-| CS-06 | Ornstein–Uhlenbeck Dynamics: Mean Reversion and Numerical Convergence Orders | III | B | Planned (pilot) |
+| CS-06 | [Ornstein–Uhlenbeck Dynamics: Mean Reversion and Numerical Convergence Orders](case-studies/06-ornstein-uhlenbeck/) | III | B | Complete (pilot) |
 | CS-07 | Phase Transitions in the Two-Dimensional Ising Model | IV | C | Planned |
 | CS-08 | Bidisperse Disk Packing by Simulated Annealing | IV | B | Planned |
 | CS-09 | Free Langevin Dynamics and the Einstein Relation | V | B | Planned |

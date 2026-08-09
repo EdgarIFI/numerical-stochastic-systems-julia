@@ -21,12 +21,17 @@
 #
 #     julia --project=. scripts/verify_reproducibility.jl
 #
-# No case study has reached its implementation gate, so no reference summary
-# exists. An empty register is the expected state and is reported as a pass: the
-# script still validates the environment files on which every later reproduction
-# depends. Tolerance-based comparison of committed reference values against
-# freshly computed results is introduced together with the first case study; this
-# script makes no numerical comparison.
+# One reference summary is registered at present, that of the CS-06 pilot. An
+# empty register remains a pass as well, for a repository in which no case study
+# has yet produced evidence: the script still validates the environment files on
+# which every later reproduction depends.
+#
+# This script makes no numerical comparison of any kind. It checks schema,
+# discovery, and reproducibility structure. Semantic regression checking of a
+# persisted record — recomputing its analytical references and its recorded
+# discrepancies, and applying the case's own acceptance criteria — belongs to that
+# case's own reference test, and a fresh numerical reproduction of the run is a
+# third thing that neither performs.
 #
 # The script reads. It writes nothing, creates nothing, and never invokes Git.
 #
