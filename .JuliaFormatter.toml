@@ -1,0 +1,47 @@
+# JuliaFormatter configuration.
+#
+# The settings are deliberately conservative. The default style is used with a
+# line width suited to scientific code, and the aggressive rewrites that would
+# obscure an equation or a performance-critical loop are switched off. In
+# particular, join_lines_based_on_source preserves the line breaks chosen by the
+# author, which matters when a numerical expression is laid out to mirror the
+# mathematics it implements.
+#
+# Continuous integration formats the repository with JuliaFormatter v1 through
+# the julia-actions/julia-format action, which reads this file.
+
+style = "default"
+indent = 4
+margin = 92
+
+# Normalise `for i = 1:n` to `for i in 1:n`, the prevailing modern convention.
+always_for_in = true
+
+# Preserve authored line breaks wherever they remain legal.
+join_lines_based_on_source = true
+
+# Enforce LF endings, matching .gitattributes.
+normalize_line_endings = "unix"
+
+# Leave the author's constructs alone: no rewriting between the short and long
+# function forms, no conversion of pipes into calls, no imposed `return`, and no
+# rewriting of conditionals.
+short_to_long_function_def = false
+always_use_return = false
+pipe_to_function_call = false
+import_to_using = false
+conditional_to_if = false
+short_circuit_to_if = false
+
+# Keep indexing and type signatures compact in numerical code, so that an
+# expression reads as `a[i+1]` rather than `a[i + 1]`.
+whitespace_ops_in_indices = false
+whitespace_typedefs = false
+whitespace_in_kwargs = true
+
+# Prose is written by hand: docstrings and Markdown are never reflowed.
+format_docstrings = false
+format_markdown = false
+
+remove_extra_newlines = true
+trailing_comma = true

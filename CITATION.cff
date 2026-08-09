@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+type: software
+message: >-
+  If you refer to this repository, or reuse its code, prose, or figures, please
+  cite it using the metadata below.
+title: "Stochastic Systems in Julia"
+abstract: >-
+  A Julia repository of ten reproducible numerical case studies in probability,
+  stochastic processes, and computational statistical physics. Each case study
+  states a question, develops the mathematics it rests on, implements the
+  numerical method from first principles, and validates the result against an
+  analytical or independently computed reference with quantified uncertainty.
+  The repository is under active construction and no release has been made.
+authors:
+  - family-names: "Pérez Flores"
+    given-names: "Edgar Axel"
+repository-code: "https://github.com/EdgarIFI/numerical-stochastic-systems-julia"
+license:
+  - MIT
+  - CC-BY-4.0
+keywords:
+  - Julia
+  - stochastic processes
+  - Monte Carlo methods
+  - stochastic differential equations
+  - molecular dynamics
+  - computational statistical physics
+  - reproducible research

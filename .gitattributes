@@ -1,0 +1,25 @@
+# Line-ending policy.
+#
+# The repository is authored on Windows and reproduced on Linux in continuous
+# integration. Every text file is therefore stored and checked out with LF
+# endings, so that diffs, checksums, and formatter output are identical on both
+# platforms.
+
+* text=auto eol=lf
+
+# Explicit rules for the text formats used in this repository.
+*.jl    text eol=lf
+*.toml  text eol=lf
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.cff   text eol=lf
+*.bib   text eol=lf
+*.csv   text eol=lf
+
+# Binary formats: never normalised and never diffed as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.pdf   binary
